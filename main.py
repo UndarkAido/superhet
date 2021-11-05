@@ -141,7 +141,7 @@ def genWeatherForecast(index=0, index_spoken="Today"):
     print("Generating a weather forecast...")
     today = weather["daily"][index]
     print(today)
-    report = index_spoken + " the high is " + str(round(today["temp"]["max"])) + " and the low is " + str(
+    report = index_spoken + " the high will be " + str(round(today["temp"]["max"])) + " and the low will be " + str(
         round(today["temp"]["min"])) + "." + constants.OW_CODE_SPOKEN_FUTURE[
                  today["weather"][0]["id"]] + " with a " + str(
         round(today["pop"] * 100)) + " percent chance of rain."
