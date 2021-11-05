@@ -20,7 +20,7 @@ import secrets
 
 lastTrack: Optional[str] = None
 track: Optional[str] = None
-trackQueue: deque[str] = deque()
+trackQueue = deque()
 
 lastHour: datetime.hour = None
 lastHalfHour: int = None
