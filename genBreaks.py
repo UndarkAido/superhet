@@ -4,6 +4,7 @@ from pathlib import Path
 
 import gtts
 from pydub import AudioSegment
+import holidays
 
 targetdir = "breaks/gtts"
 station = "Superhet Radio"
@@ -26,11 +27,24 @@ def convert():
         generated.popleft()
 
 
+identify = {
+    'normal': {
+        'thisis': "This is {station}.",
+        'yourelistening': "You're listening to {station}.",
+        'youretuned': "You're tuned to {station}.",
+        'thankyou': "Thank you for listening to {station}.",
+    },
+    'xmas': {
+        'merry': "Merry Christmas from {station}.",
+        'holidays': "Happy Holidays from {station}",
+        'reindeer': "Are those reindeer on the roof? Maybe they're here to listen to {station} with you."
+    }
+}
+
 if __name__ == '__main__':
-    generate(f"This is {station}.", "identify/normal/thisis")
-    generate(f"You're listening to {station}.", "identify/normal/yourelistening")
-    generate(f"You're tuned to {station}.", "identify/normal/youretuned")
-    generate(f"Thank you for listening to {station}.", "identify/normal/thankyou")
+    for category, lines in identify:
+        for key, line in lines:
+            generate(line.format(station=station), f"identify/{category}/{key}")
     for hour in range(0, 24):
         clockhour = 12 if (hour % 12) == 0 else hour % 12
         for periods in [["abb", "AM", "PM"], ["phon", "in the morning", "in the evening"]]:

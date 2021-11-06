@@ -1,3 +1,5 @@
 feedparser
 gtts
 pygame
+holidays
+sortedcontainers

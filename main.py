@@ -5,7 +5,7 @@ import random
 import time
 import urllib
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pathlib import Path
 from typing import Optional
 from urllib import request
@@ -42,14 +42,45 @@ mixer.init()
 def get_random_file(ext, top=os.getcwd(), subdir="**"):
     file_list = list(Path(top).glob(f"{subdir}/*.{ext}"))
     if not len(file_list):
-        return f"No files matched that extension: {ext}"
+        return None # f"No files matched that extension: {ext}"
     rand = random.randint(0, len(file_list) - 1)
     return file_list[rand]
 
 
+def calculate_mix(epoch=datetime.today().date()):
+    if epoch in config.music_mix:
+        return config.music_mix[epoch]
+    last_date: date = next(config.music_mix.irange(maximum=epoch, reverse=True), None)
+    next_date: date = next(config.music_mix.irange(minimum=epoch), None)
+    last_mix: dict = config.music_mix[last_date]
+    next_mix: dict = config.music_mix[next_date]
+    if last_mix == next_mix:
+        return last_mix
+    since_last: int = (epoch - last_date).days
+    until_next: int = (next_date - epoch).days
+    last_weight: float = until_next / (since_last + until_next)
+    next_weight: float = since_last / (since_last + until_next)
+    epoch_mix = dict()
+    for source in set(list(last_mix.keys()) + list(next_mix.keys())):
+        epoch_mix[source] = (last_mix[source] * last_weight if source in last_mix else 0) + (
+            next_mix[source] * next_weight if source in next_mix else 0)
+    return epoch_mix
+
+
 def getNext():
     global trackQueue
-    trackQueue.append(get_random_file("mp3", config.MUSICDIR))
+    mix = calculate_mix()
+    tracks = []
+    weights = []
+    for source in mix.keys():
+        source_track = get_random_file("mp3", config.MUSICDIR + "/" + source)
+        if source_track is not None:
+            tracks.append(source_track)
+            weights.append(mix[source])
+    if tracks:
+        trackQueue.append(random.choices(tracks, weights))
+    else:
+        trackQueue.append(get_random_file("mp3", config.MUSICDIR + "/normal"))
 
 
 def playNext():
