@@ -78,7 +78,7 @@ def getNext():
             tracks.append(source_track)
             weights.append(mix[source])
     if tracks:
-        trackQueue.append(random.choices(tracks, weights))
+        trackQueue.append(random.choices(tracks, weights)[0])
     else:
         trackQueue.append(get_random_file("mp3", config.MUSICDIR + "/normal"))
 
