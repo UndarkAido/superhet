@@ -1,6 +1,8 @@
 secrets.py
 *.mp3
 *.ogg
+music/
+archive/
 vault/
 
 

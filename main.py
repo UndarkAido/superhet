@@ -80,7 +80,7 @@ def getNext():
     if tracks:
         trackQueue.append(random.choices(tracks, weights)[0])
     else:
-        trackQueue.append(get_random_file("mp3", config.MUSICDIR + "/normal"))
+        trackQueue.append(get_random_file("mp3", config.MUSICDIR + "/instrumental"))
 
 
 def playNext():

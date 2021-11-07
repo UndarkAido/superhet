@@ -22,13 +22,16 @@ year_end = date(epoch_year, 12, 31)
 
 music_mix = SortedDict({
     year_start: {
-        "normal": 1.0
+        "instrumental": 0.8,
+        "lyrical": 0.2
     },
     thanksgiving: {
-        "normal": 1.0
+        "instrumental": 0.8,
+        "lyrical": 0.2
     },
     thanksgiving + timedelta(days=1): {
-        "normal": 0.9,
+        "instrumental": 0.7,
+        "lyrical": 0.2,
         "holidays": 0.1
     },
     christmas - timedelta(weeks=1): {
@@ -38,6 +41,8 @@ music_mix = SortedDict({
         "holidays": 1.0
     },
     year_end: {
-        "normal": 1.0
+        "instrumental": 0.8,
+        "lyrical": 0.2,
+        "holidays": 0.1
     }
 })
