@@ -1,101 +1,4 @@
-# WWWO_CODE_SPOKEN = {
-#     # Moderate or heavy snow in area with thunder
-#     "395": "there is moderate or heavy snow the in area with thunder",
-#     # Patchy light snow in area with thunder
-#     "392": "there is patchy light snow in the area with thunder",
-#     # Moderate or heavy rain in area with thunder
-#     "389": "there is moderate or heavy rain in the area with thunder",
-#     # Patchy light rain in area with thunder
-#     "386": "there is patchy light rain in the area with thunder",
-#     # Moderate or heavy showers of ice pellets
-#     "377": "there are moderate or heavy showers of ice pellets",
-#     # Light showers of ice pellets
-#     "374": "there are light showers of ice pellets",
-#     # Moderate or heavy snow showers
-#     "371": "there are moderate or heavy snow showers",
-#     # Light snow showers
-#     "368": "there are light snow showers",
-#     # Moderate or heavy sleet showers
-#     "365": "there are Moderate or heavy sleet showers",
-#     # Light sleet showers
-#     "362": "there are light sleet showers",
-#     # Torrential rain shower
-#     "359": "there is torrential rain shower",
-#     # Moderate or heavy rain shower
-#     "356": "there is moderate or heavy rain shower",
-#     # Light rain shower
-#     "353": "there is light rain shower",
-#     # Ice pellets
-#     "350": "there are ice pellets",
-#     # Heavy snow
-#     "338": "there is heavy snow",
-#     # Patchy heavy snow
-#     "335": "there is patchy heavy snow",
-#     # Moderate snow
-#     "332": "there is moderate snow",
-#     # Patchy moderate snow
-#     "329": "there is patchy moderate snow",
-#     # Light snow
-#     "326": "there is light snow",
-#     # Patchy light snow
-#     "323": "there is patchy light snow",
-#     # Moderate or heavy sleet
-#     "320": "there is moderate or heavy sleet",
-#     # Light sleet
-#     "317": "there is light sleet",
-#     # Moderate or Heavy freezing rain
-#     "314": "there is moderate or Heavy freezing rain",
-#     # Light freezing rain
-#     "311": "there is light freezing rain",
-#     # Heavy rain
-#     "308": "there is heavy rain",
-#     # Heavy rain at times
-#     "305": "there is heavy rain at times",
-#     # Moderate rain
-#     "302": "there is moderate rain",
-#     # Moderate rain at times
-#     "299": "there is moderate rain at times",
-#     # Light rain
-#     "296": "there is light rain",
-#     # Patchy light rain
-#     "293": "there is patchy light rain",
-#     # Heavy freezing drizzle
-#     "284": "there is heavy freezing drizzle",
-#     # Freezing drizzle
-#     "281": "there is freezing drizzle",
-#     # Light drizzle
-#     "266": "there is light drizzle",
-#     # Patchy light drizzle
-#     "263": "there is patchy light drizzle",
-#     # Freezing fog
-#     "260": "there is freezing fog",
-#     # Fog
-#     "248": "there is fog",
-#     # Blizzard
-#     "230": "there is a blizzard",
-#     # Blowing snow
-#     "227": "there is blowing snow",
-#     # Thundery outbreaks in nearby
-#     "200": "there are thundery outbreaks in nearby",
-#     # Patchy freezing drizzle nearby
-#     "185": "there is patchy freezing drizzle nearby",
-#     # Patchy sleet nearby
-#     "182": "there is patchy sleet nearby",
-#     # Patchy snow nearby
-#     "179": "there is patchy snow nearby",
-#     # Patchy rain nearby
-#     "176": "there is patchy rain nearby",
-#     # Mist
-#     "143": "there is mist",
-#     # Overcast
-#     "122": "it is overcast",
-#     # Cloudy
-#     "119": "it is cloudy",
-#     # Partly Cloudy
-#     "116": "it is partly cloudy",
-#     # Clear/Sunny
-#     "113": "it is clear",
-# }
+import pygame
 
 OW_CODE_SPOKEN_CURRENT = {
     # Group 2xx: Thunderstorm
@@ -336,3 +239,5 @@ OW_CODE_SPOKEN_FUTURE = {
     # overcast clouds: 85-100%
     804: "there will be overcast clouds",
 }
+
+SONG_END = pygame.USEREVENT + 1

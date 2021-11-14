@@ -1,8 +1,8 @@
 #! /usr/bin/python3
+import asyncio
 import json
 import os
 import random
-import time
 import urllib
 from collections import deque
 from datetime import datetime, timedelta, date
@@ -12,7 +12,7 @@ from urllib import request
 
 import feedparser
 import gtts
-from pygame import mixer
+import pygame
 
 import config
 import constants
@@ -30,19 +30,17 @@ checkingFeed: bool = False
 lastFeedCheck: Optional[datetime] = None
 lastFeedItem: Optional[str] = None
 
-weatherLoaded: bool = False
+weatherLoaded: datetime.day = None
 weather: json = None
 
-firstBreak: bool = True
-
-mixer.init()
+running: asyncio.futures.Future
 
 
 # https://codereview.stackexchange.com/a/202801
 def get_random_file(ext, top=os.getcwd(), subdir="**"):
     file_list = list(Path(top).glob(f"{subdir}/*.{ext}"))
     if not len(file_list):
-        return None # f"No files matched that extension: {ext}"
+        return None  # f"No files matched that extension: {ext}"
     rand = random.randint(0, len(file_list) - 1)
     return file_list[rand]
 
@@ -83,7 +81,7 @@ def getNext():
         trackQueue.append(get_random_file("mp3", config.MUSICDIR + "/instrumental"))
 
 
-def playNext():
+async def playNext():
     global lastTrack
     global track
     if len(trackQueue) < 1:
@@ -92,19 +90,19 @@ def playNext():
         lastTrack = track
         track = str(trackQueue[0])
         print("Playing", trackQueue[0])
-        mixer.music.load(trackQueue[0])
-        mixer.music.play()
+        await asyncio.get_running_loop().run_in_executor(None, pygame.mixer.music.load, trackQueue[0])
+        pygame.mixer.music.play()
         trackQueue.popleft()
         getNext()
 
 
-def checkFeed():
+async def checkFeed():
     print("Checking the RSS feed...")
     global checkingFeed
     global lastFeedItem
     global lastFeedCheck
     lastFeedCheck = datetime.now()
-    nf = feedparser.parse(config.NEWSFEED)
+    nf = await asyncio.get_running_loop().run_in_executor(None, feedparser.parse, config.NEWSFEED)
     if nf.bozo:
         print("Feed parse failed because", nf.bozo_exception.reason)
         return
@@ -114,10 +112,10 @@ def checkFeed():
         while not success:
             try:
                 print("Downloading...")
-                request.urlretrieve(link, 'news.mp3')
+                await asyncio.get_running_loop().run_in_executor(None, request.urlretrieve, link, 'news.mp3')
                 print("Download successful!")
                 lastFeedItem = link
-                trackQueue.appendleft('news.mp3')
+                trackQueue.append('news.mp3')
                 success = True
             except urllib.error.URLError as e:
                 print("Download failed because", e.reason)
@@ -133,28 +131,13 @@ def loadWeatherData():
     print(url)
     try:
         weather = json.load(request.urlopen(url))
-        weatherLoaded = True
+        weatherLoaded = datetime.today()
     except urllib.error.URLError as e:
         print("loadWeatherData failed because", e.reason)
-        weatherLoaded = False
 
 
 def genWeatherReport():
     print("Generating a weather report...")
-    # try:
-    #     with request.urlopen(config.WTTRIN_SRC + "/" + config.WTTRIN_LOC + "?format=j1") as res:
-    #         data = json.load(res)
-    #         report = "The temperature is " + data["current_condition"][0]["temp_F"] + " degrees and it feels like " + \
-    #                  data["current_condition"][0]["FeelsLikeF"] + ". " + constants.WWWO_CODE_SPOKEN[
-    #                      data["current_condition"][0]["weatherCode"]] + "."
-    #         try:
-    #             gtts.gTTS(report).save('report.mp3')
-    #             trackqueue.appendleft('report.mp3')
-    #             print("Done!")
-    #         except gtts.tts.gTTSError as e:
-    #             print("Weather failed because", e.msg)
-    # except urllib.error.URLError as e:
-    #     print("Weather failed because", e.reason)
     current = weather["current"]
     print(current)
     report = "Currently the temperature is " + str(round(current["temp"])) + " degrees and it feels like " + str(
@@ -184,54 +167,162 @@ def genWeatherForecast(index=0, index_spoken="Today"):
         print("Weather failed because", e.msg)
 
 
-def interruptMusic():
+async def interruptMusic():
+    pygame.mixer.music.set_volume(config.volume * .75)
+    await asyncio.sleep(1)
+    pygame.mixer.music.set_volume(config.volume * .50)
+    await asyncio.sleep(1)
+    pygame.mixer.music.set_volume(config.volume * .25)
+    await asyncio.sleep(1)
     if track is not None:
         if track == "news.mp3" or track == "report.mp3" or track == "forecast.mp3":
-            mixer.music.pause()
-        else:
-            mixer.music.set_volume(.25)
+            pygame.mixer.music.pause()
 
 
-def unInterruptMusic():
+async def unInterruptMusic():
     if track is not None:
         if track == "news.mp3" or track == "report.mp3" or track.startswith("forecast"):
-            mixer.music.unpause()
+            pygame.mixer.music.unpause()
+    await asyncio.sleep(1)
+    pygame.mixer.music.set_volume(config.volume * .50)
+    await asyncio.sleep(1)
+    pygame.mixer.music.set_volume(config.volume * .75)
+    await asyncio.sleep(1)
+    pygame.mixer.music.set_volume(config.volume * 1)
+
+
+def last_hour(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return dt - timedelta(minutes=dt.minute, seconds=dt.second, microseconds=dt.microsecond)
+
+
+def last_half_hour(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return dt - timedelta(minutes=(dt.minute % 30), seconds=dt.second, microseconds=dt.microsecond)
+
+
+def last_minute(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return dt - timedelta(seconds=dt.second, microseconds=dt.microsecond)
+
+
+def last_5_minutes(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return dt - timedelta(minutes=(dt.minute % 5), seconds=dt.second, microseconds=dt.microsecond)
+
+
+def until_next_hour(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return last_hour(dt) + timedelta(hours=1) - dt
+
+
+def until_next_half_hour(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return last_half_hour(dt) + timedelta(minutes=30) - dt
+
+
+def until_next_minute(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return last_minute(dt) + timedelta(minutes=1) - dt
+
+
+def until_next_5_minutes(dt=None):
+    if dt is None:
+        dt = datetime.now()
+    return last_5_minutes(dt) + timedelta(minutes=5) - dt
+
+
+async def do_break(firstBreak=False):
+    if not firstBreak:
+        await interruptMusic()
+    sayidentity = pygame.mixer.Sound(get_random_file("ogg", "breaks", f"*/identify/{'normal'}"))
+    pygame.mixer.Channel(0).play(sayidentity)
+    await asyncio.sleep(sayidentity.get_length())
+    if not firstBreak:
+        half_hour = last_half_hour()
+        saytime = pygame.mixer.Sound(get_random_file(
+            f"{half_hour.hour:02d}-{half_hour.minute:02d}.ogg",
+            "breaks",
+            "*/time"
+        ))
+        pygame.mixer.Channel(0).play(saytime)
+        await asyncio.sleep(saytime.get_length())
+        await unInterruptMusic()
+
+
+async def loop_break():
+    while True:
+        await asyncio.sleep(until_next_half_hour().total_seconds())
+        await do_break()
+
+
+async def loop_feed():
+    while True:
+        await checkFeed()
+        await asyncio.sleep(until_next_5_minutes().total_seconds())
+
+
+async def loop_weather():
+    while True:
+        loadWeatherData()
+        if weather is not None:
+            if weather is not None or weatherLoaded == datetime.today():
+                genWeatherForecast(1, "Tomorrow")
+                genWeatherForecast()
+            if weatherLoaded:
+                genWeatherReport()
+        await asyncio.sleep(until_next_half_hour().total_seconds())
+
+
+def pygame_event_loop(loop, event_queue):
+    while True:
+        event = pygame.event.wait()
+        asyncio.run_coroutine_threadsafe(event_queue.put(event), loop=loop)
+
+
+async def handle_events(event_queue):
+    while True:
+        event = await event_queue.get()
+        if event.type == pygame.QUIT:
+            break
+        elif event.type == constants.SONG_END:
+            await playNext()
         else:
-            mixer.music.set_volume(1.0)
+            pass
+            # print("event", event)
+    asyncio.get_event_loop().stop()
+
+
+async def main():
+    global running
+    loop = asyncio.get_running_loop()
+    running = loop.create_future()
+    pygame.init()
+    pygame.mixer.init()
+    pygame.mixer.music.set_endevent(constants.SONG_END)
+    await do_break(True)
+    event_queue = asyncio.Queue()
+    pygame_task = loop.run_in_executor(None, pygame_event_loop, loop, event_queue)
+    event_task = asyncio.ensure_future(handle_events(event_queue))
+    asyncio.create_task(loop_break())
+    asyncio.create_task(loop_weather())
+    asyncio.create_task(loop_feed())
+    asyncio.create_task(playNext())
+    try:
+        await running
+    except KeyboardInterrupt:
+        pass
+    finally:
+        event_task.cancel()
 
 
 if __name__ == '__main__':
-    getNext()
-    while True:
-        if not mixer.music.get_busy():
-            playNext()
-        if lastHour is None or datetime.now().hour != lastHour:
-            lastHour = datetime.now().hour
-            loadWeatherData()
-            if weather is not None:
-                genWeatherForecast(1, "Tomorrow")
-                genWeatherForecast()
-                if weatherLoaded:
-                    genWeatherReport()
-        if lastMinute is None or datetime.now().minute != lastMinute:
-            lastMinute = datetime.now().minute
-        if lastHalfHour is None or int(datetime.now().minute / 30) != lastHalfHour:
-            lastHalfHour = int(datetime.now().minute / 30)
-            interruptMusic()
-            sayidentity = mixer.Sound(get_random_file("ogg", "breaks", f"*/identify/{'normal'}"))
-            saytime = mixer.Sound(get_random_file(
-                f"{datetime.now().hour:02d}-{lastHalfHour * 30:02d}.ogg",
-                "breaks",
-                "*/time"
-            ))
-            mixer.Channel(0).play(sayidentity)
-            if firstBreak:
-                firstBreak = False
-            else:
-                time.sleep(sayidentity.get_length())
-                mixer.Channel(0).play(saytime)
-            time.sleep(saytime.get_length())
-            unInterruptMusic()
-        if lastFeedCheck is None or datetime.now() > lastFeedCheck + timedelta(minutes=1):
-            checkFeed()
-        time.sleep(.5)
+    asyncio.run(main())
+    exit(0)

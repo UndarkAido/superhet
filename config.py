@@ -46,3 +46,5 @@ music_mix = SortedDict({
         "holidays": 0.1
     }
 })
+
+volume: float = 1.0
