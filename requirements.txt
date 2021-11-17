@@ -3,3 +3,8 @@ gtts
 pygame
 holidays
 sortedcontainers
+quart
+quart-cors
+quart-openapi
+hypercorn
+mutagen

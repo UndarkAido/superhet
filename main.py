@@ -13,17 +13,24 @@ from urllib import request
 import feedparser
 import gtts
 import pygame
+from hypercorn import Config
+from hypercorn.asyncio import serve
+from mutagen.mp3 import MP3
+from quart import send_from_directory
+from quart_cors import cors
+from quart_openapi import Pint, Resource
 
 import config
 import constants
 import secrets
 
-lastTrack: Optional[str] = None
+lastTracks = deque()
 track: Optional[str] = None
 trackQueue = deque()
+is_paused: bool = True
 
 lastHour: datetime.hour = None
-lastHalfHour: int = None
+lastHalfHour: Optional[int] = None
 lastMinute: datetime.minute = None
 
 checkingFeed: bool = False
@@ -34,6 +41,104 @@ weatherLoaded: datetime.day = None
 weather: json = None
 
 running: asyncio.futures.Future
+
+app = cors(Pint(__name__, title='Superhet', static_folder='frontend/build'))
+
+
+@app.route('/')
+async def root_api():
+    print("Root")
+    return await send_from_directory('frontend/build', 'index.html')
+
+
+@app.route('/<path:path>')
+async def path_api(path):
+    print("Path", path)
+    return await send_from_directory('frontend/build', path)
+
+
+@app.route('/api/next')
+class NextAPI(Resource):
+    async def get(self):
+        pygame.mixer.music.stop()
+        return "done"
+
+    async def post(self):
+        pygame.mixer.music.stop()
+        return "success"
+
+
+@app.route('/api/back')
+class BackAPI(Resource):
+    async def get(self):
+        await playLast()
+        return "done"
+
+    async def post(self):
+        await playLast()
+        return "success"
+
+
+@app.route('/api/playing')
+class PlayingAPI(Resource):
+    async def get(self):
+        return json.dumps(
+            {'last': list(map(str, lastTracks)), 'playing': str(track), 'next': list(map(str, trackQueue)),
+             'time_left': -1 if is_paused else 1 + int(MP3(track).info.length*1000) - pygame.mixer.music.get_pos()})
+
+
+@app.route('/api/pause')
+class PauseAPI(Resource):
+    async def get(self):
+        global is_paused
+        pygame.mixer.music.pause()
+        is_paused = True
+        return "done"
+
+    async def post(self):
+        global is_paused
+        pygame.mixer.music.pause()
+        is_paused = True
+        return "success"
+
+
+@app.route('/api/unpause')
+class UnpauseAPI(Resource):
+    async def get(self):
+        global is_paused
+        pygame.mixer.music.unpause()
+        is_paused = False
+        return "done"
+
+    async def post(self):
+        global is_paused
+        pygame.mixer.music.unpause()
+        is_paused = False
+        return "success"
+
+
+@app.route('/api/weather')
+class WeatherAPI(Resource):
+    async def get(self):
+        await do_weather()
+        pygame.mixer.music.stop()
+        return "done"
+
+    async def post(self):
+        await do_weather()
+        pygame.mixer.music.stop()
+        return "success"
+
+
+@app.route('/api/break')
+class BreakAPI(Resource):
+    async def get(self):
+        await do_break(False, True)
+        return "done"
+
+    async def post(self):
+        await do_break(False, True)
+        return "success"
 
 
 # https://codereview.stackexchange.com/a/202801
@@ -82,18 +187,35 @@ def getNext():
 
 
 async def playNext():
-    global lastTrack
     global track
+    global is_paused
     if len(trackQueue) < 1:
         getNext()
     if len(trackQueue) > 0:
-        lastTrack = track
+        lastTracks.appendleft(track)
+        if len(lastTracks) > 20:
+            lastTracks.pop()
         track = str(trackQueue[0])
-        print("Playing", trackQueue[0])
+        print("Playing", list(trackQueue))  # [0]
         await asyncio.get_running_loop().run_in_executor(None, pygame.mixer.music.load, trackQueue[0])
         pygame.mixer.music.play()
+        is_paused = False
         trackQueue.popleft()
-        getNext()
+
+
+async def playLast():
+    global track
+    global is_paused
+    if lastTracks[0] is None:
+        lastTracks.popleft()
+    if len(lastTracks) > 0:
+        trackQueue.appendleft(track)
+        track = lastTracks[0]
+        lastTracks.popleft()
+        print("Rewinding", track)
+        await asyncio.get_running_loop().run_in_executor(None, pygame.mixer.music.load, track)
+        pygame.mixer.music.play()
+        is_paused = False
 
 
 async def checkFeed():
@@ -124,19 +246,19 @@ async def checkFeed():
         print("There was no new entry.")
 
 
-def loadWeatherData():
+async def loadWeatherData():
     global weather
     global weatherLoaded
     url = "https://api.openweathermap.org/data/2.5/onecall?" + config.OPENWEATHER_LOC + "&appid=" + secrets.OpenWeatherKey + "&units=imperial"
     print(url)
     try:
-        weather = json.load(request.urlopen(url))
+        weather = json.load(await asyncio.get_running_loop().run_in_executor(None, request.urlopen, url))
         weatherLoaded = datetime.today()
     except urllib.error.URLError as e:
         print("loadWeatherData failed because", e.reason)
 
 
-def genWeatherReport():
+async def genWeatherReport():
     print("Generating a weather report...")
     current = weather["current"]
     print(current)
@@ -144,14 +266,15 @@ def genWeatherReport():
         round(current["feels_like"])) + ". " + constants.OW_CODE_SPOKEN_CURRENT[
                  current["weather"][0]["id"]] + "."
     try:
-        gtts.gTTS(report).save('report.mp3')
+        await asyncio.get_running_loop().run_in_executor(None, (
+            await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save, 'report.mp3')
         trackQueue.appendleft('report.mp3')
         print("Done!")
     except gtts.tts.gTTSError as e:
         print("Weather failed because", e.msg)
 
 
-def genWeatherForecast(index=0, index_spoken="Today"):
+async def genWeatherForecast(index=0, index_spoken="Today"):
     print("Generating a weather forecast...")
     today = weather["daily"][index]
     print(today)
@@ -160,14 +283,16 @@ def genWeatherForecast(index=0, index_spoken="Today"):
                  today["weather"][0]["id"]] + " with a " + str(
         round(today["pop"] * 100)) + " percent chance of rain."
     try:
-        gtts.gTTS(report).save('forecast' + str(index) + '.mp3')
-        trackQueue.appendleft('forecast' + str(index) + '.mp3')
+        await asyncio.get_running_loop().run_in_executor(None, (
+            await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save, f'forecast{index}.mp3')
+        trackQueue.appendleft(f'forecast{index}.mp3')
         print("Done!")
     except gtts.tts.gTTSError as e:
         print("Weather failed because", e.msg)
 
 
 async def interruptMusic():
+    global is_paused
     pygame.mixer.music.set_volume(config.volume * .75)
     await asyncio.sleep(1)
     pygame.mixer.music.set_volume(config.volume * .50)
@@ -177,12 +302,15 @@ async def interruptMusic():
     if track is not None:
         if track == "news.mp3" or track == "report.mp3" or track == "forecast.mp3":
             pygame.mixer.music.pause()
+            is_paused = True
 
 
 async def unInterruptMusic():
+    global is_paused
     if track is not None:
         if track == "news.mp3" or track == "report.mp3" or track.startswith("forecast"):
             pygame.mixer.music.unpause()
+            is_paused = False
     await asyncio.sleep(1)
     pygame.mixer.music.set_volume(config.volume * .50)
     await asyncio.sleep(1)
@@ -239,13 +367,13 @@ def until_next_5_minutes(dt=None):
     return last_5_minutes(dt) + timedelta(minutes=5) - dt
 
 
-async def do_break(firstBreak=False):
-    if not firstBreak:
+async def do_break(say_time=True, duck=True):
+    if duck:
         await interruptMusic()
     sayidentity = pygame.mixer.Sound(get_random_file("ogg", "breaks", f"*/identify/{'normal'}"))
     pygame.mixer.Channel(0).play(sayidentity)
     await asyncio.sleep(sayidentity.get_length())
-    if not firstBreak:
+    if say_time:
         half_hour = last_half_hour()
         saytime = pygame.mixer.Sound(get_random_file(
             f"{half_hour.hour:02d}-{half_hour.minute:02d}.ogg",
@@ -254,6 +382,7 @@ async def do_break(firstBreak=False):
         ))
         pygame.mixer.Channel(0).play(saytime)
         await asyncio.sleep(saytime.get_length())
+    if duck:
         await unInterruptMusic()
 
 
@@ -269,15 +398,19 @@ async def loop_feed():
         await asyncio.sleep(until_next_5_minutes().total_seconds())
 
 
+async def do_weather():
+    await loadWeatherData()
+    if weather is not None:
+        if weather is not None or weatherLoaded == datetime.today():
+            await genWeatherForecast(1, "Tomorrow")
+            await genWeatherForecast()
+        if weatherLoaded:
+            await genWeatherReport()
+
+
 async def loop_weather():
     while True:
-        loadWeatherData()
-        if weather is not None:
-            if weather is not None or weatherLoaded == datetime.today():
-                genWeatherForecast(1, "Tomorrow")
-                genWeatherForecast()
-            if weatherLoaded:
-                genWeatherReport()
+        await do_weather()
         await asyncio.sleep(until_next_half_hour().total_seconds())
 
 
@@ -307,7 +440,10 @@ async def main():
     pygame.init()
     pygame.mixer.init()
     pygame.mixer.music.set_endevent(constants.SONG_END)
-    await do_break(True)
+    app_config = Config()
+    app_config.bind = ["localhost:8080", "0.0.0.0:8080"]
+    loop.create_task(serve(app, app_config))
+    await do_break(False, False)
     event_queue = asyncio.Queue()
     pygame_task = loop.run_in_executor(None, pygame_event_loop, loop, event_queue)
     event_task = asyncio.ensure_future(handle_events(event_queue))
