@@ -141,6 +141,17 @@ class BreakAPI(Resource):
         return "success"
 
 
+@app.route('/api/stop')
+class StopAPI(Resource):
+    async def get(self):
+        print("HERE")
+        exit(0)
+
+    async def post(self):
+        print("HERE")
+        exit(0)
+
+
 # https://codereview.stackexchange.com/a/202801
 def get_random_file(ext, top=os.getcwd(), subdir="**"):
     file_list = list(Path(top).glob(f"{subdir}/*.{ext}"))
@@ -266,8 +277,7 @@ async def genWeatherReport():
         round(current["feels_like"])) + ". " + constants.OW_CODE_SPOKEN_CURRENT[
                  current["weather"][0]["id"]] + "."
     try:
-        await asyncio.get_running_loop().run_in_executor(None, (
-            await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save, 'report.mp3')
+        (await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save(f'report.mp3')
         trackQueue.appendleft('report.mp3')
         print("Done!")
     except gtts.tts.gTTSError as e:
@@ -283,8 +293,7 @@ async def genWeatherForecast(index=0, index_spoken="Today"):
                  today["weather"][0]["id"]] + " with a " + str(
         round(today["pop"] * 100)) + " percent chance of rain."
     try:
-        await asyncio.get_running_loop().run_in_executor(None, (
-            await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save, f'forecast{index}.mp3')
+        (await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save(f'forecast{index}.mp3')
         trackQueue.appendleft(f'forecast{index}.mp3')
         print("Done!")
     except gtts.tts.gTTSError as e:

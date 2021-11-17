@@ -4,6 +4,9 @@ secrets.py
 music/
 archive/
 vault/
+/logs/**
+!/logs/**/
+!**/.gitkeep
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm+all,venv,python,linux,windows

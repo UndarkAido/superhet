@@ -8,3 +8,4 @@ quart-cors
 quart-openapi
 hypercorn
 mutagen
+aiohttp
