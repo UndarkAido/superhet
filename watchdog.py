@@ -17,7 +17,7 @@ async def start(apology: bool = False):
     global superhet
     global superhet_out
     global missed
-    print("here1")
+    print("Starting Superhet")
     missed = -1
     superhet_out = open(f"logs/{time.strftime('%Y%m%d-%H%M%S')}.log", "w")
     if sys.platform.startswith('win'):
@@ -27,29 +27,25 @@ async def start(apology: bool = False):
     else:
         superhet = await asyncio.create_subprocess_shell(f"venv/bin/python main.py {'--apology' if apology else ''}",
                                                          stdout=superhet_out, stderr=superhet_out)
-    print("here2")
+    print("Superhet is started")
 
 
 async def run():
     global superhet
     global superhet_out
     while True:
-        try:
-            print(await superhet.wait())
-        except KeyboardInterrupt:
-            print("ERROR")
-            pass
-        finally:
-            print("FINALLYA")
-            # await end()
+        print("Waiting for retrun code")
+        print(f"Return code: {await superhet.wait()}")
         await start()
 
 
 async def end():
     if sys.platform.startswith('win'):
-        os.system(f"TASKKILL /F /T /PID {superhet.pid}")
+        kill = f"TASKKILL /F /T /PID {superhet.pid}"
     else:
-        os.system(f"kill -9 {superhet.pid+1}")
+        kill = f"kill -9 {superhet.pid+1}"
+    print(kill)
+    os.system(kill)
     superhet_out.close()
 
 
@@ -60,12 +56,13 @@ async def watch():
             if missed >= 0:
                 missed += 1
             try:
-                async with session.get('http://localhost:8080/api/playing') as response:
+                async with session.get('http://localhost:8080/api/ping') as response:
                     print(await response.text())
                     missed = 0
                 await asyncio.sleep(10)
             except Exception as e:
-                if missed > 3:
+                print(f"Missed {missed} pings")
+                if missed > 2:
                     print("Restarting")
                     await end()
 

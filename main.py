@@ -68,6 +68,12 @@ class NextAPI(Resource):
         return "success"
 
 
+@app.route('/api/ping')
+class PingAPI(Resource):
+    async def get(self):
+        return "pong"
+
+
 @app.route('/api/back')
 class BackAPI(Resource):
     async def get(self):
