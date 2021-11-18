@@ -84,7 +84,7 @@ class PlayingAPI(Resource):
     async def get(self):
         return json.dumps(
             {'last': list(map(str, lastTracks)), 'playing': str(track), 'next': list(map(str, trackQueue)),
-             'time_left': -1 if is_paused else 1 + int(MP3(track).info.length*1000) - pygame.mixer.music.get_pos()})
+             'time_left': -1 if is_paused else 1 + int(MP3(track).info.length * 1000) - pygame.mixer.music.get_pos()})
 
 
 @app.route('/api/pause')
@@ -288,10 +288,10 @@ async def genWeatherForecast(index=0, index_spoken="Today"):
     print("Generating a weather forecast...")
     today = weather["daily"][index]
     print(today)
-    report = index_spoken + " the high will be " + str(round(today["temp"]["max"])) + " and the low will be " + str(
-        round(today["temp"]["min"])) + "." + constants.OW_CODE_SPOKEN_FUTURE[
-                 today["weather"][0]["id"]] + " with a " + str(
-        round(today["pop"] * 100)) + " percent chance of rain."
+    report = f"{index_spoken} the high will be {round(today['temp']['max'])} " \
+             f"and the low will be {round(today['temp']['min'])}. " \
+             f"{constants.OW_CODE_SPOKEN_FUTURE[today['weather'][0]['id']]} " \
+             f"with a {round(today['pop']) if today['pop'] > 1 else 0} percent chance of rain."
     try:
         (await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save(f'forecast{index}.mp3')
         trackQueue.appendleft(f'forecast{index}.mp3')
