@@ -46,22 +46,25 @@ async def end():
     if sys.platform.startswith('win'):
         os.system(f"TASKKILL /F /T /PID {superhet.pid}")
     else:
+        os.system(f"kill -s SIGKILL {superhet.pid}")
         superhet.kill()
     superhet_out.close()
 
 
 async def watch():
-    first = True
+    missed = -1
     async with aiohttp.ClientSession() as session:
         while True:
+            if missed >= 0:
+                missed += 1
             try:
                 async with session.get('http://localhost:8080/api/playing') as response:
                     print(await response.text())
-                    first = False
+                    missed = 0
                 await asyncio.sleep(10)
             except Exception as e:
-                if not first:
-                    print("Here")
+                if missed > 3:
+                    print("Restarting")
                     await end()
 
 
