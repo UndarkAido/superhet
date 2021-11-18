@@ -450,7 +450,7 @@ async def main():
     pygame.mixer.init()
     pygame.mixer.music.set_endevent(constants.SONG_END)
     app_config = Config()
-    app_config.bind = ["localhost:8080", "0.0.0.0:8080"]
+    app_config.bind = ["0.0.0.0:8080"]
     loop.create_task(serve(app, app_config))
     await do_break(False, False)
     event_queue = asyncio.Queue()
