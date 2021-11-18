@@ -49,7 +49,7 @@ async def end():
     if sys.platform.startswith('win'):
         os.system(f"TASKKILL /F /T /PID {superhet.pid}")
     else:
-        os.system(f"kill -s SIGKILL {superhet.pid}")
+        os.system(f"kill -9 {superhet.pid+1}")
     superhet_out.close()
 
 
