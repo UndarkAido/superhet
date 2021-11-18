@@ -59,12 +59,12 @@ async def watch():
                 async with session.get('http://localhost:8080/api/ping') as response:
                     print(await response.text())
                     missed = 0
-                await asyncio.sleep(10)
             except Exception as e:
                 print(f"Missed {missed} pings")
                 if missed > 2:
                     print("Restarting")
                     await end()
+            await asyncio.sleep(10)
 
 
 async def main():
