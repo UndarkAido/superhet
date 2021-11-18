@@ -10,12 +10,15 @@ import aiohttp as aiohttp
 running: asyncio.Future
 superhet: asyncio.subprocess.Process
 superhet_out: TextIO
+missed: int
 
 
 async def start(apology: bool = False):
     global superhet
     global superhet_out
+    global missed
     print("here1")
+    missed = -1
     superhet_out = open(f"logs/{time.strftime('%Y%m%d-%H%M%S')}.log", "w")
     if sys.platform.startswith('win'):
         superhet = await asyncio.create_subprocess_shell(
@@ -47,12 +50,11 @@ async def end():
         os.system(f"TASKKILL /F /T /PID {superhet.pid}")
     else:
         os.system(f"kill -s SIGKILL {superhet.pid}")
-        superhet.kill()
     superhet_out.close()
 
 
 async def watch():
-    missed = -1
+    global missed
     async with aiohttp.ClientSession() as session:
         while True:
             if missed >= 0:
