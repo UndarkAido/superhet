@@ -200,7 +200,9 @@ def getNext():
     if tracks:
         trackQueue.append(random.choices(tracks, weights)[0])
     else:
-        trackQueue.append(get_random_file("mp3", config.MUSICDIR + "/instrumental"))
+        file = get_random_file("mp3", config.MUSICDIR + "/instrumental")
+        if file is not None:
+            trackQueue.append(file)
 
 
 async def playNext():
@@ -208,16 +210,25 @@ async def playNext():
     global is_paused
     if len(trackQueue) < 1:
         getNext()
+        if len(trackQueue) < 1:
+            await asyncio.sleep(1)
+            asyncio.get_running_loop().create_task(playNext())
+            return
     if len(trackQueue) > 0:
         lastTracks.appendleft(track)
-        if len(lastTracks) > 20:
+        if len(lastTracks) > 30:
             lastTracks.pop()
         track = str(trackQueue[0])
         print("Playing", list(trackQueue))  # [0]
-        await asyncio.get_running_loop().run_in_executor(None, pygame.mixer.music.load, trackQueue[0])
-        pygame.mixer.music.play()
         is_paused = False
-        trackQueue.popleft()
+        play = trackQueue.popleft()
+        try:
+            await asyncio.get_running_loop().run_in_executor(None, pygame.mixer.music.load, play)
+            pygame.mixer.music.play()
+        except Exception as e:
+            pygame.mixer.music.unload()
+            await move("broken")
+            asyncio.get_running_loop().create_task(playNext())
 
 
 async def playLast():
@@ -332,6 +343,19 @@ async def unInterruptMusic():
     pygame.mixer.music.set_volume(config.volume * .75)
     await asyncio.sleep(1)
     pygame.mixer.music.set_volume(config.volume * 1)
+
+
+async def move(dest: str, to_move: Optional[str] = None, src: Optional[str] = None):
+    if to_move is None:
+        to_move = str(track)
+        #await playNext()
+        #lastTracks.popleft()
+    if src is None:
+        src = config.MUSICDIR
+    move_to = to_move.replace(src, dest)
+    dest_subdir = os.path.dirname(move_to)
+    os.makedirs(dest_subdir, exist_ok=True)
+    os.rename(to_move, move_to)
 
 
 def last_hour(dt=None):

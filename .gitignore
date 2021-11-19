@@ -4,6 +4,7 @@ secrets.py
 music/
 archive/
 vault/
+broken/
 /logs/**
 !/logs/**/
 !**/.gitkeep
