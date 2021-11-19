@@ -215,7 +215,8 @@ async def playNext():
             asyncio.get_running_loop().create_task(playNext())
             return
     if len(trackQueue) > 0:
-        lastTracks.appendleft(track)
+        if not (track is None):
+            lastTracks.appendleft(track)
         if len(lastTracks) > 30:
             lastTracks.pop()
         track = str(trackQueue[0])
@@ -351,8 +352,7 @@ async def unInterruptMusic():
 async def move(dest: str, to_move: Optional[str] = None, src: Optional[str] = None):
     if to_move is None:
         to_move = str(track)
-        #await playNext()
-        #lastTracks.popleft()
+        track = None
     if src is None:
         src = config.MUSICDIR
     move_to = to_move.replace(src, dest)
@@ -410,6 +410,8 @@ def until_next_5_minutes(dt=None):
 
 
 async def do_break(say_time=True, duck=True):
+    if is_paused:
+        return
     if duck:
         await interruptMusic()
     sayidentity = pygame.mixer.Sound(get_random_file("ogg", "breaks", f"*/identify/{'normal'}"))
