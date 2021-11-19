@@ -265,7 +265,8 @@ async def checkFeed():
                 await asyncio.get_running_loop().run_in_executor(None, request.urlretrieve, link, 'news.mp3')
                 print("Download successful!")
                 lastFeedItem = link
-                trackQueue.append('news.mp3')
+                if trackQueue.count('news.mp3') == 0:
+                    trackQueue.append('news.mp3')
                 success = True
             except urllib.error.URLError as e:
                 print("Download failed because", e.reason)
@@ -295,7 +296,8 @@ async def genWeatherReport():
                  current["weather"][0]["id"]] + "."
     try:
         (await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save(f'report.mp3')
-        trackQueue.appendleft('report.mp3')
+        if trackQueue.count('report.mp3') == 0:
+            trackQueue.appendleft('report.mp3')
         print("Done!")
     except gtts.tts.gTTSError as e:
         print("Weather failed because", e.msg)
@@ -311,7 +313,8 @@ async def genWeatherForecast(index=0, index_spoken="Today"):
              f"with a {round(today['pop']) if today['pop'] > 1 else 0} percent chance of rain."
     try:
         (await asyncio.get_running_loop().run_in_executor(None, gtts.gTTS, report)).save(f'forecast{index}.mp3')
-        trackQueue.appendleft(f'forecast{index}.mp3')
+        if trackQueue.count(f'forecast{index}.mp3') == 0:
+            trackQueue.appendleft(f'forecast{index}.mp3')
         print("Done!")
     except gtts.tts.gTTSError as e:
         print("Weather failed because", e.msg)
