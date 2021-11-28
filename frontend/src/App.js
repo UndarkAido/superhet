@@ -11,7 +11,8 @@ import {
     SkipPrevious as SkipPreviousIcon,
     Sync as SyncIcon,
     WbSunny as SunnyIcon,
-    Radio as RadioIcon
+    Radio as RadioIcon,
+    Archive as ArchiveIcon
 } from '@mui/icons-material';
 
 class App extends React.Component {
@@ -34,8 +35,9 @@ class App extends React.Component {
             });
             clearTimeout(this.update)
             //if (res.data.time_left > 0) {
-            this.update = setTimeout(this.checkPlaying, 1000);//res.data.time_left);
             //}
+        }).finally(() => {
+            this.update = setTimeout(this.checkPlaying, 1000);//res.data.time_left);
         })
     }
 
@@ -50,22 +52,22 @@ class App extends React.Component {
                     || <Typography>Next track in {Math.round(this.state.time_left / 1000)} seconds</Typography>
                 }
                 <br/>
-                <Button
+                {/*<Button
                     variant="contained"
                     startIcon={<SyncIcon/>}
                     onClick={() => this.checkPlaying()}
                 >Sync</Button>
                 <br/>
-                <br/>
+                <br/>*/}
                 <Button
                     variant="contained"
                     startIcon={<SkipPreviousIcon/>}
-                    onClick={() => client.post("back").then(() => this.checkPlaying())}
+                    onClick={() => client.post("back")/*.then(() => this.checkPlaying())*/}
                 >Back</Button>
                 <Button
                     variant="contained"
                     startIcon={<SkipNextIcon/>}
-                    onClick={() => client.post("next").then(() => this.checkPlaying())}
+                    onClick={() => client.post("next")/*.then(() => this.checkPlaying())*/}
                 >Next</Button>
                 <br/>
                 <br/>
@@ -74,12 +76,12 @@ class App extends React.Component {
                     && <Button
                         variant="contained"
                         startIcon={<PlayArrowIcon/>}
-                        onClick={() => client.post("unpause").then(() => this.checkPlaying())}
+                        onClick={() => client.post("unpause")/*.then(() => this.checkPlaying())*/}
                     >Unpause</Button>
                     || <Button
                         variant="contained"
                         startIcon={<PauseIcon/>}
-                        onClick={() => client.post("pause").then(() => this.checkPlaying())}
+                        onClick={() => client.post("pause")/*.then(() => this.checkPlaying())*/}
                     >Pause</Button>
                 }
                 <br/>
@@ -87,15 +89,22 @@ class App extends React.Component {
                 <Button
                     variant="contained"
                     startIcon={<SunnyIcon/>}
-                    onClick={() => client.post("weather").then(() => this.checkPlaying())}
+                    onClick={() => client.post("weather")/*.then(() => this.checkPlaying())*/}
                 >Weather</Button>
-                <br/>
+                {/*<br/>
                 <br/>
                 <Button
                     variant="contained"
                     startIcon={<RadioIcon/>}
-                    onClick={() => client.post("break").then(() => this.checkPlaying())}
-                >Break</Button>
+                    onClick={() => client.post("break")}//.then(() => this.checkPlaying())}
+                >Break</Button>*/}
+                <br/>
+                <br/>
+                <Button
+                    variant="contained"
+                    startIcon={<ArchiveIcon/>}
+                    onClick={() => client.post("archive")/*.then(() => this.checkPlaying())*/}
+                >Archive</Button>
             </div>
         </React.Fragment>
             ;

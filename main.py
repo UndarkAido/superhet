@@ -147,6 +147,23 @@ class BreakAPI(Resource):
         return "success"
 
 
+@app.route('/api/archive')
+class ArchiveAPI(Resource):
+    async def get(self):
+        pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        await move("archive")
+        asyncio.get_running_loop().create_task(playNext())
+        return "done"
+
+    async def post(self):
+        pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        await move("archive")
+        asyncio.get_running_loop().create_task(playNext())
+        return "success"
+
+
 @app.route('/api/stop')
 class StopAPI(Resource):
     async def get(self):
@@ -351,6 +368,7 @@ async def unInterruptMusic():
 
 async def move(dest: str, to_move: Optional[str] = None, src: Optional[str] = None):
     if to_move is None:
+        global track
         to_move = str(track)
         track = None
     if src is None:
